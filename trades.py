@@ -1,114 +1,34 @@
-#import libraries
-import yfinance as yf
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from arch import arch_model
+# CurrencyX Analyzer
 
-#fetch data from yahoo
-ticker = yf.Ticker("USDTRY=X")
-data = ticker.history(interval="1d", start="2014-09-21", end="2024-09-21")
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=for-the-badge)
+![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas&logoColor=white&style=for-the-badge)
+![yfinance](https://img.shields.io/badge/yfinance-FF9900?logo=yfinance&logoColor=white&style=for-the-badge)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?logo=matplotlib&logoColor=white&style=for-the-badge)
+![Seaborn](https://img.shields.io/badge/Seaborn-4479A1?logo=seaborn&logoColor=white&style=for-the-badge)
+![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white&style=for-the-badge)
+![ARCH](https://img.shields.io/badge/arch-ED1C24?logo=&logoColor=white&style=for-the-badge)
 
-#Price Analysis
-plt.figure(figsize=(12, 6))
-plt.plot(data['Close'])
-plt.title('USD/TRY Exchange Rate')
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.grid(True)
-plt.show()
+## About
 
-#Log Returns Analysis
-plt.figure(figsize=(12, 6))
-plt.plot(data['Close'].pct_change().apply(lambda x: np.log(1 + x)))
-plt.title('USD/TRY Daily Log Returns')
-plt.xlabel('Date')
-plt.ylabel('Log Returns')
-plt.grid(True)
-plt.show()
+**CurrencyX Analyzer** is a comprehensive Python project that performs in-depth analysis of the USD/TRY exchange rate. The tool fetches historical data from Yahoo Finance and employs various statistical techniques and models—including volatility estimation, EWMA, GARCH modeling, and trading strategy simulation—to provide valuable insights into market behavior.
 
-#Correlations
-data = data.drop(columns=['Volume', 'Dividends', 'Stock Splits'])
-correlations = data.corr()
-print("Correlations with log returns:")
-print(correlations.sort_values(by=['Close'], ascending=False))
+## Features
 
-#Historical volatility
-y = data['Close'].pct_change().apply(lambda x: np.log(1 + x)) 
-plt.figure(figsize=(12, 6))
-window_sizes = [20, 50, 100]
-for window_size in window_sizes:
-    plt.plot(y.rolling(window=window_size).std(), label=f"{window_size}-day")
-plt.title('Standard Deviation of Daily Log Returns')
-plt.xlabel('Date')
-plt.ylabel('Standard Deviation')
-plt.legend()
-plt.grid(True)
-plt.show()
+- **Data Fetching:** Retrieves historical USD/TRY exchange rate data using the `yfinance` library.
+- **Price Analysis:** Visualizes exchange rate trends over time with Matplotlib.
+- **Log Returns Analysis:** Computes and plots daily log returns.
+- **Correlation Analysis:** Calculates correlations among key financial metrics.
+- **Historical Volatility:** Computes standard deviation of log returns over different window sizes.
+- **EWMA Volatility:** Estimates volatility using exponential weighted moving averages with various decay factors.
+- **GARCH Modeling:** Fits a GARCH(1,1) model to log returns to analyze volatility clustering.
+- **Volatility Forecasting:** Compares realized volatility with forecasted values.
+- **Trading Strategy Simulation:** Implements a simple volatility breakout strategy and evaluates performance using metrics like Sharpe Ratio, Sortino Ratio, Maximum Drawdown, and Annualized Volatility.
 
-#Decay Factors
-decay_factors = [0.9, 0.95, 0.98]
-for decay_factor in decay_factors:
-    ewma_volatility = y.ewm(span=1 / (1 - decay_factor), adjust=False).std()
-    print(f"EWMA Volatility with decay factor {decay_factor}: {ewma_volatility.iloc[-1]:.4f}")
-plt.figure(figsize=(12, 6))
-for decay_factor in decay_factors:
-    ewma_volatility = y.ewm(span=1 / (1 - decay_factor), adjust=False).std()
-    plt.plot(ewma_volatility, label=f"Decay Factor {decay_factor}")
-plt.title('EWMA Volatility')
-plt.xlabel('Date')
-plt.ylabel('Volatility')
-plt.legend()
-plt.grid(True)
-plt.show()
+## Technology Stack
 
-#Garch Model
-y = data['Close'].pct_change().apply(lambda x: np.log(1 + x)) 
-y = y.fillna(0)
-model = arch_model(y, mean='constant', vol='GARCH', p=1, o=0, q=1)
-results = model.fit()
-results.plot()
-plt.show()
-print("AIC:", results.aic)
-print("BIC:", results.bic)
-print("Loglikelihood:", results.loglikelihood)
-
-#Volatility Forecasting
-realized_volatility = y.rolling(window=30).std() * np.sqrt(252) 
-plt.figure(figsize=(12, 6))
-plt.plot(realized_volatility.index, realized_volatility, label='Realized Volatility')
-plt.title('Forecasted vs. Realized Volatility')
-plt.xlabel('Date')
-plt.ylabel('Volatility')
-plt.legend()
-plt.grid(True)
-plt.show()
-
-#Trading Strategy
-data['volatility'] = data['Close'].pct_change().rolling(window=20).std() * np.sqrt(252)
-signals = pd.DataFrame(index=data.index)
-signals['position'] = np.where(data['volatility'] > 0.02, 1, -1)
-returns = data['Close'].pct_change() * signals['position'].shift(1)
-plt.figure(figsize=(12, 6))
-plt.plot(data['Close'], label='Price')
-plt.plot(signals['position'] * data['Close'], label='Strategy')
-plt.title('Volatility Breakout Strategy')
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.legend()
-plt.show()
-cumulative_returns = (1 + returns).cumprod() - 1
-print("Cumulative Returns:", cumulative_returns.iloc[-1])
-
-#Evaluation
-sharpe_ratio = (returns.mean() - 0.02) / returns.std()
-print("Sharpe Ratio:", sharpe_ratio)
-downside_deviation = returns[returns < 0].std()
-sortino_ratio = (returns.mean() - 0.02) / downside_deviation
-print("Sortino Ratio:", sortino_ratio)
-max_drawdown = (returns.cumsum().max() - returns.cumsum()).max() / returns.cumsum().max()
-print("Maximum Drawdown:", max_drawdown)
-annualized_volatility = returns.std() * np.sqrt(252)
-print("Annualized Volatility:", annualized_volatility)
-total_pnl = returns.sum()
-print("Total PnL:", total_pnl)
+- **Language:** Python  
+- **Data Processing:** Pandas, NumPy  
+- **Data Visualization:** Matplotlib, Seaborn  
+- **Financial Data:** yfinance  
+- **Statistical Modeling:** ARCH package (for GARCH models)  
+- **Evaluation:** scikit-learn (metrics)
